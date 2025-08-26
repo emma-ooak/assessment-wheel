@@ -26,7 +26,7 @@
     input[type="range"]{width:100%}
     .colors{display:grid;grid-template-columns:repeat(2, minmax(0,1fr));gap:10px;margin:10px 0 0}
     .color-cell{display:flex;align-items:center;gap:8px;border:1px solid #e5e7eb;border-radius:10px;padding:8px}
-    .color-cell label{min-width:110px;font-weight:600}
+    .color-cell label{min-width:130px;font-weight:600}
     .btns{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 0}
     button{appearance:none;border:1px solid #d1d5db;background:#fff;border-radius:10px;padding:8px 12px;font-weight:600;cursor:pointer;font:inherit}
     .chart-pad{padding:16px}
@@ -36,8 +36,8 @@
 </head>
 <body>
   <div class="wrap">
-    <h1>IEP Development Assessment Wheel™</h1>
-    <p class="hint">Set 0–5 for each category. Use the color pickers to customize wedge colors and wheel background.</p>
+    <h1>IEP Development Assessment Wheel</h1>
+    <p class="hint">Set 0–5 for each category. Customize wedge colors, background (including transparent), and export PNG/SVG.</p>
     <div class="grid">
       <div class="card">
         <div class="pad">
@@ -51,23 +51,27 @@
           <div class="colors">
             <div class="color-cell">
               <label for="colorGreen">Green (4–5)</label>
-              <input id="colorGreen" type="color" value="#81C995" />
-              <input id="hexGreen" type="text" value="#81C995" style="width:100px" />
+              <input id="colorGreen" type="color" value="#79A394" />
+              <input id="hexGreen" type="text" value="#79A394" style="width:100px" />
             </div>
             <div class="color-cell">
               <label for="colorYellow">Yellow (2–3)</label>
-              <input id="colorYellow" type="color" value="#FDD663" />
-              <input id="hexYellow" type="text" value="#FDD663" style="width:100px" />
+              <input id="colorYellow" type="color" value="#EADA80" />
+              <input id="hexYellow" type="text" value="#EADA80" style="width:100px" />
             </div>
             <div class="color-cell">
               <label for="colorRed">Red (0–1)</label>
-              <input id="colorRed" type="color" value="#F28B82" />
-              <input id="hexRed" type="text" value="#F28B82" style="width:100px" />
+              <input id="colorRed" type="color" value="#BF7576" />
+              <input id="hexRed" type="text" value="#BF7576" style="width:100px" />
             </div>
             <div class="color-cell">
               <label for="colorBg">Wheel Background</label>
               <input id="colorBg" type="color" value="#FFFFFF" />
               <input id="hexBg" type="text" value="#FFFFFF" style="width:100px" />
+            </div>
+            <div class="color-cell">
+              <label for="bgTransparent">Transparent</label>
+              <input id="bgTransparent" type="checkbox" />
             </div>
           </div>
           <div class="btns">
@@ -89,9 +93,9 @@
     </div>
 
     <footer>
-      <p>The IEP Development Assessment Wheel™ was created by Master IEP Coach®. <br>
+      <p>The IEP Development Assessment Wheel was created by Master IEP Coach. <br>
       Copyright © Catherine Whitcher, LLC and Master IEP Coach® 20234. <br>
-      It was adapted by Emma Siemasko (One of a Kind Advocacy) into this interactive tool.</p>
+      It was adapted by Emma Siemasko into this widget.</p>
       <p><a href="https://www.oneofakindadvocacy.com/s/MASTER_IEP_Coach_Business_Foundations_Guide_1_.pdf" target="_blank">Reference: Master IEP Coach Business Foundations Guide</a></p>
     </footer>
   </div>
@@ -103,19 +107,19 @@ const categories = [
 ];
 const state = categories.map(_=>0);
 
-// Colors (editable)
 let palette = {
-  green: "#81C995",
-  yellow:"#FDD663",
-  red:   "#F28B82",
-  bg:    "#FFFFFF"
+  green: "#79A394",
+  yellow:"#EADA80",
+  red:   "#BF7576",
+  bg:    "#FFFFFF",
+  transparent: false
 };
 
-// Geometry + strokes
+// geometry
 const OUTLINE_COLOR = "#374151";
 const WEDGE_OUTLINE = "#bfc7d1";
 const SPOKE_COLOR   = "#98a1ad";
-const GRID_COLOR    = "#e5e7eb";
+const GRID_COLOR    = "#9ca3af";
 const R_MAX = 340, R_MIN_VISIBLE = 10, cx = 450, cy = 450;
 const svg = document.getElementById('wheel');
 
@@ -149,26 +153,26 @@ function draw(){
   svg.innerHTML='';
   addSvgFontStyle();
 
-  // Background fill
-  const bgCircle = document.createElementNS('http://www.w3.org/2000/svg','circle');
-  bgCircle.setAttribute('cx', cx); bgCircle.setAttribute('cy', cy); bgCircle.setAttribute('r', R_MAX);
-  bgCircle.setAttribute('fill', palette.bg);
-  bgCircle.setAttribute('stroke','none');
-  svg.appendChild(bgCircle);
+  if (!palette.transparent){
+    const bgCircle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    bgCircle.setAttribute('cx', cx); bgCircle.setAttribute('cy', cy); bgCircle.setAttribute('r', R_MAX);
+    bgCircle.setAttribute('fill', palette.bg);
+    bgCircle.setAttribute('stroke','none');
+    svg.appendChild(bgCircle);
+  }
 
-  // Grid rings
   for(let k=1;k<5;k++){
     const r = R_MAX*k/5;
     const ring = document.createElementNS('http://www.w3.org/2000/svg','circle');
     ring.setAttribute('cx',cx); ring.setAttribute('cy',cy); ring.setAttribute('r',r);
     ring.setAttribute('fill','none'); ring.setAttribute('stroke',GRID_COLOR);
-    ring.setAttribute('stroke-dasharray','4 6');
+    ring.setAttribute('stroke-dasharray','6 6');
+    ring.setAttribute('stroke-width','2');
     svg.appendChild(ring);
   }
 
   const n=categories.length, step=360/n, start=-90;
 
-  // Wedges
   for(let i=0;i<n;i++){
     const a0 = start + step*i;
     const a1 = a0 + step;
@@ -184,7 +188,6 @@ function draw(){
     path.setAttribute('stroke-width','1.8');
     svg.appendChild(path);
 
-    // Label
     const offset = smartLabelOffset(aMid);
     const [lx,ly] = pt(aMid, R_MAX + offset);
     const cos = Math.cos(deg2rad(aMid));
@@ -197,7 +200,6 @@ function draw(){
     label.textContent = categories[i];
     svg.appendChild(label);
 
-    // Score
     const showR = Math.max(46, r - 22);
     const [sx,sy] = pt(aMid, showR);
     const sval = document.createElementNS('http://www.w3.org/2000/svg','text');
@@ -208,7 +210,6 @@ function draw(){
     svg.appendChild(sval);
   }
 
-  // Spokes
   for(let i=0;i<n;i++){
     const a = start + step*i;
     const [x,y] = pt(a, R_MAX);
@@ -220,7 +221,6 @@ function draw(){
     svg.appendChild(spoke);
   }
 
-  // Dark rim
   const outer = document.createElementNS('http://www.w3.org/2000/svg','circle');
   outer.setAttribute('cx', cx); outer.setAttribute('cy', cy); outer.setAttribute('r', R_MAX);
   outer.setAttribute('fill','none'); outer.setAttribute('stroke', OUTLINE_COLOR);
@@ -249,12 +249,14 @@ function wireColorPickers(){
   const yellow=document.getElementById('colorYellow'), hexY=document.getElementById('hexYellow');
   const red=document.getElementById('colorRed'), hexR=document.getElementById('hexRed');
   const bg=document.getElementById('colorBg'), hexBg=document.getElementById('hexBg');
+  const transparent=document.getElementById('bgTransparent');
 
   function syncInputs(){
-    green.value = palette.green; hexG.value = palette.green;
-    yellow.value= palette.yellow; hexY.value= palette.yellow;
-    red.value   = palette.red;   hexR.value = palette.red;
-    bg.value    = palette.bg;    hexBg.value= palette.bg;
+    green.value=palette.green; hexG.value=palette.green;
+    yellow.value=palette.yellow; hexY.value=palette.yellow;
+    red.value=palette.red; hexR.value=palette.red;
+    bg.value=palette.bg; hexBg.value=palette.bg;
+    transparent.checked=palette.transparent;
   }
   function validHex(s){return /^#([0-9a-f]{6})$/i.test(s.trim());}
 
@@ -263,11 +265,14 @@ function wireColorPickers(){
     if(validHex(hexY.value)) palette.yellow=hexY.value.toUpperCase();
     if(validHex(hexR.value)) palette.red=hexR.value.toUpperCase();
     if(validHex(hexBg.value)) palette.bg=hexBg.value.toUpperCase();
+    palette.transparent=transparent.checked;
     syncInputs(); draw();
   });
   document.getElementById('btnResetColors').addEventListener('click', ()=>{
-    palette={green:"#81C995",yellow:"#FDD663",red:"#F28B82",bg:"#FFFFFF"}; syncInputs(); draw();
+    palette={green:"#79A394",yellow:"#EADA80",red:"#BF7576",bg:"#FFFFFF",transparent:false};
+    syncInputs(); draw();
   });
+
   green.addEventListener('input', ()=>{hexG.value=green.value;});
   yellow.addEventListener('input', ()=>{hexY.value=yellow.value;});
   red.addEventListener('input', ()=>{hexR.value=red.value;});
@@ -304,3 +309,4 @@ draw();
 </script>
 </body>
 </html>
+
