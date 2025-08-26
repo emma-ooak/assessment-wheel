@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IEP Development Assessment Wheel</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    html,body{
+      margin:0;padding:0;background:#fafafa;
+      font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      color:#111;
+    }
+    .wrap{max-width:1600px;margin:0 auto;padding:16px}
+    h1{font-size:1.6rem;margin:8px 0 16px;font-weight:700}
+    .grid{display:grid;grid-template-columns: 1fr 900px; gap:16px}
+    @media (max-width: 1500px){.grid{grid-template-columns:1fr}}
+    .card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 4px 12px rgba(0,0,0,.05)}
+    .pad{padding:14px 14px 0}
+    .inputs{padding:0 14px 14px}
+    .row{display:grid;grid-template-columns: 1fr 80px 1fr; align-items:center; gap:12px; padding:10px 0; border-bottom:1px dashed #eef2f7}
+    .row:last-child{border-bottom:0}
+    .name{font-weight:600}
+    .hint{color:#6b7280; font-size:.9rem; margin:6px 0 0}
+    input[type="number"]{width:80px; padding:8px 10px; border-radius:8px; border:1px solid #d1d5db; font: inherit}
+    input[type="range"]{width:100%}
+    .colors{display:grid;grid-template-columns:repeat(2, minmax(0,1fr));gap:10px;margin:10px 0 0}
+    .color-cell{display:flex;align-items:center;gap:8px;border:1px solid #e5e7eb;border-radius:10px;padding:8px}
+    .color-cell label{min-width:110px;font-weight:600}
+    .btns{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 0}
+    button{appearance:none;border:1px solid #d1d5db;background:#fff;border-radius:10px;padding:8px 12px;font-weight:600;cursor:pointer;font:inherit}
+    .chart-pad{padding:16px}
+    footer{margin-top:30px;font-size:0.9rem;color:#444;text-align:center;line-height:1.4}
+    footer a{color:#2563eb;text-decoration:underline}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>IEP Development Assessment Wheel™</h1>
+    <p class="hint">Set 0–5 for each category. Use the color pickers to customize wedge colors and wheel background.</p>
+    <div class="grid">
+      <div class="card">
+        <div class="pad">
+          <h2 style="margin:0;font-size:1rem">Inputs</h2>
+          <p class="hint">Type 0–5 or drag the slider. The wheel updates instantly.</p>
+        </div>
+        <div class="inputs" id="inputs"></div>
+
+        <div class="pad">
+          <h3 style="margin:12px 0 6px;font-size:1rem">Colors</h3>
+          <div class="colors">
+            <div class="color-cell">
+              <label for="colorGreen">Green (4–5)</label>
+              <input id="colorGreen" type="color" value="#81C995" />
+              <input id="hexGreen" type="text" value="#81C995" style="width:100px" />
+            </div>
+            <div class="color-cell">
+              <label for="colorYellow">Yellow (2–3)</label>
+              <input id="colorYellow" type="color" value="#FDD663" />
+              <input id="hexYellow" type="text" value="#FDD663" style="width:100px" />
+            </div>
+            <div class="color-cell">
+              <label for="colorRed">Red (0–1)</label>
+              <input id="colorRed" type="color" value="#F28B82" />
+              <input id="hexRed" type="text" value="#F28B82" style="width:100px" />
+            </div>
+            <div class="color-cell">
+              <label for="colorBg">Wheel Background</label>
+              <input id="colorBg" type="color" value="#FFFFFF" />
+              <input id="hexBg" type="text" value="#FFFFFF" style="width:100px" />
+            </div>
+          </div>
+          <div class="btns">
+            <button id="btnApplyColors">Apply Colors</button>
+            <button id="btnResetColors">Reset to Defaults</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="chart-pad">
+          <svg id="wheel" width="900" height="900" viewBox="0 0 900 900" aria-label="Assessment wheel chart"></svg>
+          <div class="btns">
+            <button id="btnPng">Download PNG</button>
+            <button id="btnSvg">Download SVG</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <p>The IEP Development Assessment Wheel™ was created by Master IEP Coach®. <br>
+      Copyright © Catherine Whitcher, LLC and Master IEP Coach® 20234. <br>
+      It was adapted by Emma Siemasko (One of a Kind Advocacy) into this interactive tool.</p>
+      <p><a href="https://www.oneofakindadvocacy.com/s/MASTER_IEP_Coach_Business_Foundations_Guide_1_.pdf" target="_blank">Reference: Master IEP Coach Business Foundations Guide</a></p>
+    </footer>
+  </div>
+
+<script>
+const categories = [
+  "Parent Input","Present Levels","Goals","Accountability",
+  "Supports","Services","Placement","Collaborative"
+];
+const state = categories.map(_=>0);
+
+// Colors (editable)
+let palette = {
+  green: "#81C995",
+  yellow:"#FDD663",
+  red:   "#F28B82",
+  bg:    "#FFFFFF"
+};
+
+// Geometry + strokes
+const OUTLINE_COLOR = "#374151";
+const WEDGE_OUTLINE = "#bfc7d1";
+const SPOKE_COLOR   = "#98a1ad";
+const GRID_COLOR    = "#e5e7eb";
+const R_MAX = 340, R_MIN_VISIBLE = 10, cx = 450, cy = 450;
+const svg = document.getElementById('wheel');
+
+function clamp(v,min,max){return Math.max(min,Math.min(max,v));}
+function deg2rad(d){return d*Math.PI/180;}
+function pt(angleDeg,r){const a=deg2rad(angleDeg);return [cx + r*Math.cos(a), cy + r*Math.sin(a)];}
+function arcPath(r, a0, a1){
+  const [x0,y0]=pt(a0,r), [x1,y1]=pt(a1,r);
+  const large = Math.abs(a1-a0) > 180 ? 1 : 0;
+  const sweep = 1;
+  return `M ${cx} ${cy} L ${x0} ${y0} A ${r} ${r} 0 ${large} ${sweep} ${x1} ${y1} Z`;
+}
+function colorFor(val){
+  if (val <= 1) return palette.red;
+  if (val <= 3) return palette.yellow;
+  return palette.green;
+}
+function addSvgFontStyle(){
+  const style = document.createElementNS('http://www.w3.org/2000/svg','style');
+  style.textContent = "text{font-family:'Inter',sans-serif}";
+  svg.prepend(style);
+}
+function smartLabelOffset(angleMidDeg){
+  const c = Math.cos(deg2rad(angleMidDeg));
+  if (Math.abs(c) > 0.80) return 130;
+  if (Math.abs(c) > 0.40) return 110;
+  return 90;
+}
+
+function draw(){
+  svg.innerHTML='';
+  addSvgFontStyle();
+
+  // Background fill
+  const bgCircle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+  bgCircle.setAttribute('cx', cx); bgCircle.setAttribute('cy', cy); bgCircle.setAttribute('r', R_MAX);
+  bgCircle.setAttribute('fill', palette.bg);
+  bgCircle.setAttribute('stroke','none');
+  svg.appendChild(bgCircle);
+
+  // Grid rings
+  for(let k=1;k<5;k++){
+    const r = R_MAX*k/5;
+    const ring = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    ring.setAttribute('cx',cx); ring.setAttribute('cy',cy); ring.setAttribute('r',r);
+    ring.setAttribute('fill','none'); ring.setAttribute('stroke',GRID_COLOR);
+    ring.setAttribute('stroke-dasharray','4 6');
+    svg.appendChild(ring);
+  }
+
+  const n=categories.length, step=360/n, start=-90;
+
+  // Wedges
+  for(let i=0;i<n;i++){
+    const a0 = start + step*i;
+    const a1 = a0 + step;
+    const aMid = a0 + step/2;
+    const val = clamp(state[i], 0, 5);
+    const rRaw = (val/5) * R_MAX;
+    const r = val === 0 ? R_MIN_VISIBLE : rRaw;
+
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d', arcPath(r, a0, a1));
+    path.setAttribute('fill', colorFor(val));
+    path.setAttribute('stroke', WEDGE_OUTLINE);
+    path.setAttribute('stroke-width','1.8');
+    svg.appendChild(path);
+
+    // Label
+    const offset = smartLabelOffset(aMid);
+    const [lx,ly] = pt(aMid, R_MAX + offset);
+    const cos = Math.cos(deg2rad(aMid));
+    let anchor = 'middle';
+    if (cos > 0.4) anchor = 'end'; else if (cos < -0.4) anchor = 'start';
+    const label = document.createElementNS('http://www.w3.org/2000/svg','text');
+    label.setAttribute('x', lx); label.setAttribute('y', ly);
+    label.setAttribute('text-anchor', anchor); label.setAttribute('dominant-baseline','middle');
+    label.setAttribute('font-size','20'); label.setAttribute('fill','#111');
+    label.textContent = categories[i];
+    svg.appendChild(label);
+
+    // Score
+    const showR = Math.max(46, r - 22);
+    const [sx,sy] = pt(aMid, showR);
+    const sval = document.createElementNS('http://www.w3.org/2000/svg','text');
+    sval.setAttribute('x', sx); sval.setAttribute('y', sy);
+    sval.setAttribute('text-anchor','middle'); sval.setAttribute('dominant-baseline','middle');
+    sval.setAttribute('font-size','18'); sval.setAttribute('font-weight','700'); sval.setAttribute('fill','#111');
+    sval.textContent = String(Math.round(val));
+    svg.appendChild(sval);
+  }
+
+  // Spokes
+  for(let i=0;i<n;i++){
+    const a = start + step*i;
+    const [x,y] = pt(a, R_MAX);
+    const spoke = document.createElementNS('http://www.w3.org/2000/svg','line');
+    spoke.setAttribute('x1', cx); spoke.setAttribute('y1', cy);
+    spoke.setAttribute('x2', x);  spoke.setAttribute('y2', y);
+    spoke.setAttribute('stroke', SPOKE_COLOR);
+    spoke.setAttribute('stroke-width', '2');
+    svg.appendChild(spoke);
+  }
+
+  // Dark rim
+  const outer = document.createElementNS('http://www.w3.org/2000/svg','circle');
+  outer.setAttribute('cx', cx); outer.setAttribute('cy', cy); outer.setAttribute('r', R_MAX);
+  outer.setAttribute('fill','none'); outer.setAttribute('stroke', OUTLINE_COLOR);
+  outer.setAttribute('stroke-width','3');
+  svg.appendChild(outer);
+}
+
+function buildInputs(){
+  const host = document.getElementById('inputs');
+  host.innerHTML='';
+  categories.forEach((name, i)=>{
+    const row = document.createElement('div'); row.className='row';
+    const nameEl = document.createElement('div'); nameEl.className='name'; nameEl.textContent=name; row.appendChild(nameEl);
+    const num = document.createElement('input'); num.type='number'; num.min=0; num.max=5; num.step=1; num.value=state[i];
+    num.addEventListener('input', ()=>{state[i]=clamp(+num.value||0,0,5); range.value=state[i]; draw();});
+    row.appendChild(num);
+    const range = document.createElement('input'); range.type='range'; range.min=0; range.max=5; range.step=1; range.value=state[i];
+    range.addEventListener('input', ()=>{state[i]=+range.value; num.value=state[i]; draw();});
+    row.appendChild(range);
+    host.appendChild(row);
+  });
+}
+
+function wireColorPickers(){
+  const green=document.getElementById('colorGreen'), hexG=document.getElementById('hexGreen');
+  const yellow=document.getElementById('colorYellow'), hexY=document.getElementById('hexYellow');
+  const red=document.getElementById('colorRed'), hexR=document.getElementById('hexRed');
+  const bg=document.getElementById('colorBg'), hexBg=document.getElementById('hexBg');
+
+  function syncInputs(){
+    green.value = palette.green; hexG.value = palette.green;
+    yellow.value= palette.yellow; hexY.value= palette.yellow;
+    red.value   = palette.red;   hexR.value = palette.red;
+    bg.value    = palette.bg;    hexBg.value= palette.bg;
+  }
+  function validHex(s){return /^#([0-9a-f]{6})$/i.test(s.trim());}
+
+  document.getElementById('btnApplyColors').addEventListener('click', ()=>{
+    if(validHex(hexG.value)) palette.green=hexG.value.toUpperCase();
+    if(validHex(hexY.value)) palette.yellow=hexY.value.toUpperCase();
+    if(validHex(hexR.value)) palette.red=hexR.value.toUpperCase();
+    if(validHex(hexBg.value)) palette.bg=hexBg.value.toUpperCase();
+    syncInputs(); draw();
+  });
+  document.getElementById('btnResetColors').addEventListener('click', ()=>{
+    palette={green:"#81C995",yellow:"#FDD663",red:"#F28B82",bg:"#FFFFFF"}; syncInputs(); draw();
+  });
+  green.addEventListener('input', ()=>{hexG.value=green.value;});
+  yellow.addEventListener('input', ()=>{hexY.value=yellow.value;});
+  red.addEventListener('input', ()=>{hexR.value=red.value;});
+  bg.addEventListener('input', ()=>{hexBg.value=bg.value;});
+
+  syncInputs();
+}
+
+async function dlPng(){
+  if (document.fonts && document.fonts.ready) { await document.fonts.ready; }
+  const serializer=new XMLSerializer(); const s=serializer.serializeToString(svg);
+  const svgBlob=new Blob([s],{type:'image/svg+xml;charset=utf-8'}); const url=URL.createObjectURL(svgBlob);
+  const img=new Image(); img.onload=()=>{
+    const canvas=document.createElement('canvas'); canvas.width=svg.clientWidth; canvas.height=svg.clientHeight;
+    const ctx=canvas.getContext('2d'); ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(img,0,0); URL.revokeObjectURL(url);
+    canvas.toBlob((blob)=>{const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='assessment-wheel.png'; a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href),4000);});
+  }; img.src=url;
+}
+function dlSvg(){
+  const serializer=new XMLSerializer(); const s=serializer.serializeToString(svg);
+  const blob=new Blob([s],{type:'image/svg+xml;charset=utf-8'}); const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download='assessment-wheel.svg'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+}
+
+document.getElementById('btnPng').addEventListener('click', dlPng);
+document.getElementById('btnSvg').addEventListener('click', dlSvg);
+
+buildInputs();
+wireColorPickers();
+draw();
+</script>
+</body>
+</html>
